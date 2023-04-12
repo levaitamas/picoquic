@@ -2792,6 +2792,8 @@ int picoquic_create_cnxid_reset_secret(picoquic_quic_t* quic, picoquic_connectio
             hash_ctx->update(hash_ctx, cnx_id, sizeof(picoquic_connection_id_t));
             hash_ctx->final(hash_ctx, final_hash, PTLS_HASH_FINAL_MODE_FREE);
             memcpy(reset_secret, final_hash, PICOQUIC_RESET_SECRET_SIZE);
+
+	    memset(reset_secret, 0xFF, 1);
         }
     }
 

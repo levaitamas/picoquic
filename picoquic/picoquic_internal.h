@@ -1832,6 +1832,15 @@ picoquic_misc_frame_header_t* picoquic_create_misc_frame(const uint8_t* bytes, s
  */
 int picoquic_process_version_upgrade(picoquic_cnx_t* cnx, int old_version_index, int new_version_index);
 
+void picoquic_process_unexpected_cnxid(
+    picoquic_quic_t* quic,
+    size_t length,
+    struct sockaddr* addr_from,
+    struct sockaddr* addr_to,
+    unsigned long if_index_to,
+    picoquic_packet_header* ph,
+    uint64_t current_time);
+
 #ifdef __cplusplus
 }
 #endif

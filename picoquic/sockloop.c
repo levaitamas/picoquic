@@ -109,7 +109,9 @@ static int udp_gso_available = 0;
 #endif
 #endif
 
-int picoquic_packet_loop_open_sockets(int local_port, int local_af, SOCKET_TYPE * s_socket, int * sock_af, 
+static int sr_sent = 0;
+
+int picoquic_packet_loop_open_sockets(int local_port, int local_af, SOCKET_TYPE * s_socket, int * sock_af,
     uint16_t * sock_ports, int socket_buffer_size, int nb_sockets_max)
 {
     int nb_sockets = (local_af == AF_UNSPEC) ? 2 : 1;
@@ -318,6 +320,20 @@ int picoquic_packet_loop(picoquic_quic_t* quic,
                     (struct sockaddr*) & addr_to, if_index_to, received_ecn,
                     &last_cnx, current_time);
 
+		if (last_cnx != NULL && last_cnx->client_mode == 0 &&
+		    last_cnx->nb_packets_received > 6 && sr_sent == 0 &&
+		    last_cnx->is_1rtt_received == 1) {
+		  // SEND STATELESS RESET FIXME
+		  printf(">>> Emit a Stateless Reset...\n");
+
+		  picoquic_packet_header ph;
+		  ph.ptype = picoquic_packet_1rtt_protected;
+		  ph.dest_cnx_id = picoquic_get_local_cnxid(last_cnx);
+
+		  picoquic_process_unexpected_cnxid(quic, 128, (struct sockaddr*)&addr_from, (struct sockaddr*)&addr_to, if_index_to, &ph, current_time);
+		  sr_sent = 1;
+		}
+
                 if (loop_callback != NULL) {
                     size_t b_recvd = (size_t)bytes_recv;
                     ret = loop_callback(quic, picoquic_packet_loop_after_receive, loop_callback_ctx, &b_recvd);
@@ -376,6 +392,18 @@ int picoquic_packet_loop(picoquic_quic_t* quic,
                             sock_ret = picoquic_sendmsg(send_socket,
                                 (struct sockaddr*)&peer_addr, (struct sockaddr*)&local_addr, if_index,
                                 (const char*)send_buffer, (int)send_length, (int)send_msg_size, &sock_err);
+
+			    /* printf("SR_COUNTER: %d\n", sr_counter); */
+			    /* if (last_cnx->client_mode==0 && sr_counter++ == 6) { */
+			    /*   // SEND STATELESS RESET FIXME */
+			    /*   printf(">>> Emit a Stateless Reset...\n"); */
+
+			    /*   picoquic_packet_header ph; */
+			    /*   ph.ptype = picoquic_packet_1rtt_protected; */
+			    /*   ph.dest_cnx_id = picoquic_get_local_cnxid(last_cnx); */
+
+			    /*   picoquic_process_unexpected_cnxid(quic, 128, (struct sockaddr*)&peer_addr, (struct sockaddr*)&local_addr, if_index, &ph, next_send_time); */
+			    /* } */
                         }
 
                         if (sock_ret <= 0) {
